@@ -1,157 +1,303 @@
-<<<<<<< HEAD
-# PalTech Forge — AI-assisted hackathon starter
+# NotifyBridge
 
-Production-grade Next.js starter focused on **fast pivots**: secure authentication, RBAC, operational dashboards, audit primitives, and modular “business surfaces” you can replace once the real problem statement arrives.
+NotifyBridge is an internal announcement and communication platform where authors publish company updates and employees read, acknowledge, and track important announcements with analytics and notifications.
 
-## Tech stack
+---
 
-- **Next.js 14** (App Router) + **TypeScript**
-- **TailwindCSS** + **shadcn/ui-style** component primitives (Radix)
-- **PostgreSQL** + **Prisma ORM**
-- **Auth.js / NextAuth.js v5** with **JWT sessions**, **Credentials**, and **Google OAuth**
-- **bcrypt** password hashing
-- **React Hook Form** + **Zod**
-- **sonner** toasts + **next-themes** dark mode
+# 🚀 Features
 
-## Quick start
+## Authentication & Security
 
-### 1) Install dependencies
+* Secure login and registration
+* JWT authentication using NextAuth.js
+* Role-based access control
+* Protected dashboard routes
+* Suspended user blocking
+* Optional Google OAuth login
+
+---
+
+## Role-Based Access
+
+### EMPLOYEE
+
+Employees can:
+
+* Read published announcements
+* Acknowledge announcements
+* Receive notifications
+* Track unread announcements
+
+### AUTHOR
+
+Authors can:
+
+* Create draft announcements
+* Publish announcements
+* Archive announcements
+* View engagement analytics
+
+---
+
+## Announcement Management
+
+### Draft → Publish Workflow
+
+* New announcements start as drafts
+* Drafts are private to authors
+* Publishing makes announcements visible to all employees
+* Published announcements become immutable
+* Archived announcements are hidden from the default feed
+
+---
+
+## Read Tracking
+
+* Opening an announcement automatically marks it as read
+* Tracks which employees viewed announcements
+* Prevents duplicate read records
+
+---
+
+## Acknowledgment System
+
+* Important announcements can require acknowledgment
+* Employees acknowledge announcements with one click
+* Tracks acknowledgment status and timestamp
+
+---
+
+## Analytics Dashboard
+
+Authors can view:
+
+* Total reads
+* Total acknowledgments
+* Pending acknowledgments
+* Engagement statistics
+* Employee acknowledgment tables
+
+---
+
+## Notifications
+
+* Employees receive notifications for newly published announcements
+* Authors receive notifications when employees acknowledge announcements
+* Unread notification badges
+* Mark as read / delete notifications
+
+---
+
+## Search, Filters & Pagination
+
+* Search announcements by title
+* Filter by category
+* Unread-only filtering
+* Unacknowledged-only filtering
+* Sorting and pagination support
+
+---
+
+## Optional AI Assistant
+
+AI assistant can answer:
+
+* unread announcements
+* pending acknowledgments
+* engagement summaries
+* analytics questions
+
+Uses real database data with role-aware responses.
+
+---
+
+# 🛠 Tech Stack
+
+* Next.js 14 App Router
+* TypeScript
+* PostgreSQL
+* Prisma ORM
+* TailwindCSS
+* shadcn/ui
+* NextAuth.js
+* JWT Authentication
+* React Hook Form
+* Zod Validation
+* OpenAI API (optional AI assistant)
+
+---
+
+# 📂 Project Structure
+
+```text
+src/
+  app/
+  actions/
+  auth/
+  components/
+  constants/
+  hooks/
+  lib/
+  providers/
+  prisma/
+  types/
+```
+
+---
+
+# ⚡ Getting Started
+
+## 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2) Configure environment variables
+---
 
-Copy `.env.example` to `.env` and fill values:
+## 2. Setup environment variables
 
-- **`DATABASE_URL`**: PostgreSQL connection string
-- **`AUTH_SECRET`**: long random secret (Auth.js)
-- **`AUTH_URL`**: public app URL (local: `http://localhost:3000`)
-- **`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`**: optional Google OAuth
-- **`JWT_SECRET`**: optional separate secret for custom API JWT helpers (`src/lib/jwt.ts`)
+Create `.env` file:
 
-### 3) Create database schema
+```env
+DATABASE_URL="your-postgresql-url"
 
-```bash
-npm run db:push
+AUTH_SECRET="your-auth-secret"
+
+AUTH_URL="http://localhost:3000"
+
+AUTH_GOOGLE_ID=""
+AUTH_GOOGLE_SECRET=""
+
+JWT_SECRET="your-jwt-secret"
+
+OPENAI_API_KEY=""
 ```
 
-### 4) Seed demo users + notifications
+---
+
+## 3. Push Prisma schema
+
+```bash
+npx prisma db push
+```
+
+---
+
+## 4. Seed demo data
 
 ```bash
 npm run db:seed
 ```
 
-Default credentials (local seed):
+---
 
-- **Admin**: `admin@starter.local` / `Admin123!`
-- **User**: `user@starter.local` / `User123!`
-
-### 5) Run the dev server
+## 5. Run development server
 
 ```bash
 npm run dev
 ```
 
-Open `http://localhost:3000`.
-
-## Prisma notes
-
-- Schema lives in `prisma/schema.prisma`.
-- Prisma Client is generated to `node_modules/@prisma/client`.
-- If `prisma generate` fails in restricted networks, set `NODE_TLS_REJECT_UNAUTHORIZED=0` **only** as a temporary local workaround, or configure your corporate root CA trust store.
-
-## Authentication model (Auth.js + JWT)
-
-- **Sessions**: JWT strategy (`session: { strategy: "jwt" }`) for scalable, cookie-based sessions without DB session reads on every request.
-- **OAuth linking + user persistence**: `@auth/prisma-adapter` stores users/accounts/tokens in PostgreSQL while sessions remain JWT-backed.
-- **Credentials**: bcrypt verification against `User.password`.
-- **Google OAuth**: enabled only when `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are set.
-- **Suspended users**: blocked in middleware via JWT claims refreshed on a short interval server-side.
-
-## Google OAuth setup
-
-1. Create OAuth credentials in Google Cloud Console.
-2. Add authorized redirect URI:
-
-`{AUTH_URL}/api/auth/callback/google`
-
-3. Set `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` in `.env`.
-
-## Middleware + route protection
-
-`src/middleware.ts` uses `getToken` from `next-auth/jwt` (Edge-friendly) to:
-
-- protect `/dashboard`, `/admin`, `/modules`
-- redirect unauthenticated users to `/login`
-- block **suspended** users
-- prevent non-admins from accessing `/admin`
-
-## RBAC
-
-Roles are stored in Prisma (`Role` enum: `ADMIN`, `USER`).
-
-- **Admin surfaces**: `/admin/*` (enforced in middleware + `requireAdmin()` server guard)
-- **User surfaces**: `/dashboard/*` and `/modules/*`
-
-## Folder structure (high level)
+Open:
 
 ```text
-src/
-  app/                 # App Router routes (marketing, auth, dashboards, modules)
-  actions/             # Server Actions (auth, admin, profile, CRUD stubs)
-  auth/                # Auth.js configuration (handlers + callbacks)
-  components/          # UI + layout + feature components
-  constants/           # Shared constants (navigation, routes)
-  features/            # Domain modules (mock registries, etc.)
-  hooks/               # (optional) client hooks
-  lib/                 # prisma client, validation, utilities, jwt helpers
-  prisma/              # (placeholder) optional docs / artifacts (schema remains /prisma)
-  providers/           # App-wide providers (session + theme)
-  types/               # TypeScript module augmentations (next-auth)
+http://localhost:3000
 ```
 
-## Architecture overview
+---
 
-- **Server Components first**: pages fetch with Prisma on the server where possible.
-- **Server Actions** for mutations with server-side authorization checks.
-- **Client components** where interactivity is required (forms, menus, theme toggles).
-- **Separation of concerns**:
-  - `lib/auth-guard.ts` centralizes session/admin checks for RSC layouts.
-  - `actions/*` centralizes mutations and validation entry points.
-  - `features/modules/*` provides mock datasets + registry for rapid UI iteration.
+# 👤 Demo Accounts
 
-## AI-assisted development
+## AUTHOR
 
-This template is designed for **human + AI pair programming**:
+```text
+author@starter.local
+Author123!
+```
 
-- Clear boundaries (`actions/`, `features/`, `lib/`) make it easy for an AI agent to extend without breaking auth.
-- Mock modules (`/modules/*`) give you a consistent CRUD-shaped UI to rewrite once the brief is known.
-- Keep “business truth” in Prisma models + server actions; keep UI mostly declarative.
+## EMPLOYEE
 
-## Scripts
+```text
+employee@starter.local
+Employee123!
+```
 
-- `npm run dev` — Next dev server
-- `npm run build` — `prisma generate` + `next build`
-- `npm run start` — production server
-- `npm run lint` — ESLint
-- `npm run db:push` — push schema to DB
-- `npm run db:migrate` — create migrations (dev)
-- `npm run db:seed` — seed demo data
-- `npm run db:studio` — Prisma Studio
+---
 
-## Security checklist (before demo/production)
+# 🔐 Security Features
 
-- Rotate all secrets (`AUTH_SECRET`, `JWT_SECRET`, DB creds).
-- Ensure Google OAuth redirect URLs match deployment domains.
-- Review admin destructive actions (delete user) and add confirmations appropriate to your threat model.
-- Add rate limiting / bot protection on auth routes if exposed publicly.
+* JWT session authentication
+* Middleware route protection
+* Role-based authorization
+* Protected server actions
+* Suspended user blocking
+* Server-side validation
 
-## License
+---
 
-Private hackathon template (adjust as needed).
-=======
-# NotifyBridge
-Internal Announcement and Communication Portal
->>>>>>> b6501fb08c3e8bd2149af79846e51fa19c414269
+# 📊 Main Modules
+
+| Module         | Description                         |
+| -------------- | ----------------------------------- |
+| Authentication | Secure login & role-based access    |
+| Announcements  | Create/manage company announcements |
+| Read Tracking  | Tracks employee reads               |
+| Acknowledgment | Tracks employee acknowledgment      |
+| Analytics      | Engagement statistics               |
+| Notifications  | In-app alerts                       |
+| AI Assistant   | Natural language platform assistant |
+
+---
+
+# 🤖 AI-Assisted Development
+
+This project was developed using AI-assisted engineering workflows with reusable architecture patterns and production-grade best practices.
+
+Skills used:
+
+* frontend-design
+* nextjs-app-router-patterns
+* prisma-database-setup
+* vercel-react-best-practices
+
+---
+
+# 📜 Available Scripts
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run db:push
+npm run db:seed
+npm run db:studio
+```
+
+---
+
+# 🎯 Hackathon Goal
+
+NotifyBridge helps organizations:
+
+* improve internal communication
+* ensure employees read important updates
+* track acknowledgment compliance
+* monitor engagement analytics efficiently
+
+---
+
+# 📌 Future Improvements
+
+* Real-time notifications
+* Advanced AI assistant
+* Organization support
+* CSV employee import
+* AI-powered analytics
+* Semantic announcement search
+
+---
+
+# 📄 License
+
+Hackathon Project — NotifyBridge
