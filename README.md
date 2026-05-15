@@ -211,15 +211,15 @@ http://localhost:3000
 ## AUTHOR
 
 ```text
-author@starter.local
-Author123!
+serlaanvesh@gmail.com
+Anvesh@1103
 ```
 
 ## EMPLOYEE
 
 ```text
-employee@starter.local
-Employee123!
+ surya@gmail.com
+Surya@123
 ```
 
 ---
