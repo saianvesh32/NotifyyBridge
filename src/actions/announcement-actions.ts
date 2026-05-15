@@ -7,6 +7,10 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { actionError, actionSuccess, type ActionResult } from "@/lib/errors";
 import { announcementDraftUpsertSchema } from "@/lib/validations/announcement";
+import {
+  notifyAuthorOfAcknowledgment,
+  notifyEmployeesOfPublishedAnnouncement,
+} from "@/lib/notifications";
 
 const idSchema = z.string().cuid();
 
@@ -126,22 +130,42 @@ export async function publishAnnouncement(input: unknown): Promise<ActionResult>
   try {
     const existing = await prisma.announcement.findUnique({
       where: { id: parsed.data.id },
-      select: { authorId: true, status: true, publishedAt: true },
+      select: {
+        id: true,
+        title: true,
+        requiresAcknowledgment: true,
+        authorId: true,
+        status: true,
+        publishedAt: true,
+        author: { select: { name: true } },
+      },
     });
     if (!existing) return actionError("Not found");
     if (existing.authorId !== gate.session.user.id) return actionError("Forbidden");
     if (existing.status !== AnnouncementStatus.DRAFT) return actionError("Only drafts can be published");
 
-    await prisma.announcement.update({
-      where: { id: parsed.data.id },
-      data: {
-        status: AnnouncementStatus.PUBLISHED,
-        publishedAt: existing.publishedAt ?? new Date(),
-      },
+    await prisma.$transaction([
+      prisma.announcement.update({
+        where: { id: parsed.data.id },
+        data: {
+          status: AnnouncementStatus.PUBLISHED,
+          publishedAt: existing.publishedAt ?? new Date(),
+        },
+      }),
+    ]);
+
+    await notifyEmployeesOfPublishedAnnouncement({
+      id: existing.id,
+      title: existing.title,
+      requiresAcknowledgment: existing.requiresAcknowledgment,
+      authorName: existing.author.name,
     });
+
     revalidatePath("/dashboard/announcements");
     revalidatePath(`/dashboard/announcements/${parsed.data.id}`);
     revalidatePath("/dashboard/author");
+    revalidatePath("/dashboard/notifications");
+    revalidatePath("/dashboard");
     return actionSuccess();
   } catch (e) {
     console.error(e);
@@ -236,13 +260,24 @@ export async function acknowledgeAnnouncement(input: unknown): Promise<ActionRes
       where: { id: parsed.data.announcementId },
       select: {
         id: true,
+        title: true,
         status: true,
         requiresAcknowledgment: true,
+        authorId: true,
       },
     });
     if (!row) return actionError("Not found");
     if (row.status !== AnnouncementStatus.PUBLISHED) return actionError("Acknowledgment is only available on published posts");
     if (!row.requiresAcknowledgment) return actionError("This post does not require acknowledgment");
+
+    const prior = await prisma.announcementAcknowledgment.findUnique({
+      where: {
+        userId_announcementId: {
+          userId: gate.session.user.id,
+          announcementId: row.id,
+        },
+      },
+    });
 
     await prisma.announcementAcknowledgment.upsert({
       where: {
@@ -257,8 +292,20 @@ export async function acknowledgeAnnouncement(input: unknown): Promise<ActionRes
       },
       update: {},
     });
+
+    if (!prior && gate.session.user.id !== row.authorId) {
+      await notifyAuthorOfAcknowledgment({
+        id: row.id,
+        title: row.title,
+        authorId: row.authorId,
+        employeeName: gate.session.user.name ?? null,
+        employeeEmail: gate.session.user.email ?? "",
+      });
+    }
+
     revalidatePath("/dashboard/announcements");
     revalidatePath(`/dashboard/announcements/${row.id}`);
+    revalidatePath("/dashboard/notifications");
     revalidatePath("/dashboard");
     return actionSuccess();
   } catch (e) {
@@ -276,6 +323,7 @@ export type AnnouncementAnalyticsDTO = {
   pendingAcknowledgments: number;
   acknowledgmentPercent: number | null;
   pendingEmployees: { id: string; name: string | null; email: string }[];
+  readEmployees: { id: string; name: string | null; email: string; readAt: Date }[];
 };
 
 export async function getAnnouncementAnalytics(
@@ -300,24 +348,36 @@ export async function getAnnouncementAnalytics(
   if (!announcement) return actionError("Not found");
   if (announcement.authorId !== gate.session.user.id) return actionError("Forbidden");
 
-  const [totalReads, totalAcknowledgments, employees, ackUserIds, employeeAckCount] = await prisma.$transaction([
-    prisma.announcementRead.count({ where: { announcementId: announcement.id } }),
-    prisma.announcementAcknowledgment.count({ where: { announcementId: announcement.id } }),
-    prisma.user.findMany({
-      where: { role: Role.EMPLOYEE, isSuspended: false },
-      select: { id: true, name: true, email: true },
-    }),
-    prisma.announcementAcknowledgment.findMany({
-      where: { announcementId: announcement.id },
-      select: { userId: true },
-    }),
-    prisma.announcementAcknowledgment.count({
-      where: {
-        announcementId: announcement.id,
-        user: { role: Role.EMPLOYEE },
-      },
-    }),
-  ]);
+  const [totalReads, totalAcknowledgments, employees, ackUserIds, employeeAckCount, reads] =
+    await prisma.$transaction([
+      prisma.announcementRead.count({ where: { announcementId: announcement.id } }),
+      prisma.announcementAcknowledgment.count({ where: { announcementId: announcement.id } }),
+      prisma.user.findMany({
+        where: { role: Role.EMPLOYEE, isSuspended: false },
+        select: { id: true, name: true, email: true },
+      }),
+      prisma.announcementAcknowledgment.findMany({
+        where: { announcementId: announcement.id },
+        select: { userId: true },
+      }),
+      prisma.announcementAcknowledgment.count({
+        where: {
+          announcementId: announcement.id,
+          user: { role: Role.EMPLOYEE },
+        },
+      }),
+      prisma.announcementRead.findMany({
+        where: {
+          announcementId: announcement.id,
+          user: { role: Role.EMPLOYEE },
+        },
+        orderBy: { readAt: "desc" },
+        select: {
+          readAt: true,
+          user: { select: { id: true, name: true, email: true } },
+        },
+      }),
+    ]);
 
   const ackSet = new Set(ackUserIds.map((a) => a.userId));
   const pendingEmployees = employees.filter((u) => !ackSet.has(u.id));
@@ -328,6 +388,13 @@ export async function getAnnouncementAnalytics(
       ? Math.round((employeeAckCount / employeeCount) * 1000) / 10
       : null;
 
+  const readEmployees = reads.map((r) => ({
+    id: r.user.id,
+    name: r.user.name,
+    email: r.user.email,
+    readAt: r.readAt,
+  }));
+
   return actionSuccess({
     announcementId: announcement.id,
     title: announcement.title,
@@ -337,5 +404,6 @@ export async function getAnnouncementAnalytics(
     pendingAcknowledgments,
     acknowledgmentPercent,
     pendingEmployees,
+    readEmployees,
   });
 }

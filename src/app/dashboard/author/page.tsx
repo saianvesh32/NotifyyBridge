@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CATEGORY_LABEL, STATUS_LABEL } from "@/lib/announcement-meta";
+import { AnnouncementPublishButton } from "@/components/announcements/announcement-publish-button";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -37,8 +38,8 @@ export default async function AuthorWorkspacePage() {
     <div className="space-y-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Author workspace</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
+          <h1 className="page-title">Author workspace</h1>
+          <p className="page-subtitle max-w-2xl">
             Drafts stay private until you publish. Published content can only be archived — never silently edited.
           </p>
         </div>
@@ -48,7 +49,7 @@ export default async function AuthorWorkspacePage() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight">Drafts</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Drafts</h2>
         <div className="rounded-xl border border-border/70 bg-card/40 shadow-sm backdrop-blur">
           <Table>
             <TableHeader>
@@ -77,9 +78,15 @@ export default async function AuthorWorkspacePage() {
                       {new Date(d.updatedAt).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="link" asChild className="h-auto p-0">
-                        <Link href={`/dashboard/announcements/${d.id}/edit`}>Edit</Link>
-                      </Button>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <AnnouncementPublishButton announcementId={d.id} size="sm" />
+                        <Button variant="link" asChild className="h-auto p-0">
+                          <Link href={`/dashboard/announcements/${d.id}/edit`}>Edit</Link>
+                        </Button>
+                        <Button variant="link" asChild className="h-auto p-0">
+                          <Link href={`/dashboard/announcements/${d.id}`}>Preview</Link>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -90,7 +97,7 @@ export default async function AuthorWorkspacePage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight">Published</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Published</h2>
         <div className="rounded-xl border border-border/70 bg-card/40 shadow-sm backdrop-blur">
           <Table>
             <TableHeader>
@@ -142,7 +149,7 @@ export default async function AuthorWorkspacePage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight">Archived</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Archived</h2>
         <div className="rounded-xl border border-border/70 bg-card/40 shadow-sm backdrop-blur">
           <Table>
             <TableHeader>

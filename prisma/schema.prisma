@@ -101,17 +101,20 @@ model ActivityLog {
 }
 
 model Notification {
-  id        String    @id @default(cuid())
-  userId    String
-  title     String
-  body      String    @db.Text
-  type      String    @default("info")
-  readAt    DateTime?
-  createdAt DateTime  @default(now())
+  id             String    @id @default(cuid())
+  userId         String
+  title          String
+  body           String    @db.Text
+  type           String    @default("info")
+  announcementId String?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcement Announcement? @relation(fields: [announcementId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+  @@index([userId, readAt])
 }
 
 model AuditTrail {
@@ -145,6 +148,7 @@ model Announcement {
 
   reads             AnnouncementRead[]
   acknowledgments AnnouncementAcknowledgment[]
+  notifications   Notification[]
 
   @@index([status, publishedAt])
   @@index([authorId, status])

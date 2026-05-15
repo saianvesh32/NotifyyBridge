@@ -5,11 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  archiveAnnouncement,
-  deleteAnnouncementDraft,
-  publishAnnouncement,
-} from "@/actions/announcement-actions";
+import { archiveAnnouncement, deleteAnnouncementDraft } from "@/actions/announcement-actions";
+import { AnnouncementPublishButton } from "@/components/announcements/announcement-publish-button";
 
 export function AnnouncementAuthorControls({
   announcementId,
@@ -53,25 +50,7 @@ export function AnnouncementAuthorControls({
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button
-        type="button"
-        disabled={pending}
-        onClick={() => {
-          start(async () => {
-            const res = await publishAnnouncement({ id: announcementId });
-            if (!res.success) {
-              toast.error(res.error);
-              return;
-            }
-            toast.success("Published — content is now locked");
-            router.push(`/dashboard/announcements/${announcementId}`);
-            router.refresh();
-          });
-        }}
-      >
-        {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        Publish
-      </Button>
+      <AnnouncementPublishButton announcementId={announcementId} />
       <Button
         type="button"
         variant="outline"

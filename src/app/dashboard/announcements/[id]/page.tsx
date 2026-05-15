@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AnnouncementAcknowledgeButton } from "@/components/announcements/announcement-ack-button";
 import { AnnouncementAuthorControls } from "@/components/announcements/announcement-author-controls";
+import { AnnouncementPublishButton } from "@/components/announcements/announcement-publish-button";
 import { CATEGORY_LABEL, STATUS_LABEL } from "@/lib/announcement-meta";
 
 type Props = { params: { id: string } };
@@ -61,7 +62,7 @@ export default async function AnnouncementDetailPage({ params }: Props) {
             {row.pinned ? <Badge>Pinned</Badge> : null}
             {row.requiresAcknowledgment ? <Badge variant="default">Ack required</Badge> : null}
           </div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-balance">{row.title}</h1>
+          <h1 className="page-title text-balance">{row.title}</h1>
           <p className="text-sm text-muted-foreground">
             By {row.author.name ?? row.author.email}
             {row.publishedAt ? ` · ${new Date(row.publishedAt).toLocaleString()}` : null}
@@ -72,9 +73,12 @@ export default async function AnnouncementDetailPage({ params }: Props) {
             <Link href="/dashboard/announcements">Back to list</Link>
           </Button>
           {isAuthor && row.status === "DRAFT" ? (
-            <Button asChild>
-              <Link href={`/dashboard/announcements/${row.id}/edit`}>Edit draft</Link>
-            </Button>
+            <>
+              <AnnouncementPublishButton announcementId={row.id} />
+              <Button variant="outline" asChild>
+                <Link href={`/dashboard/announcements/${row.id}/edit`}>Edit draft</Link>
+              </Button>
+            </>
           ) : null}
           {isAuthor && row.status !== "DRAFT" ? (
             <Button variant="secondary" asChild>

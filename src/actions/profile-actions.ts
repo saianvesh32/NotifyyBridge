@@ -36,22 +36,4 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
   return actionSuccess();
 }
 
-const notificationReadSchema = z.object({
-  notificationId: z.string().cuid(),
-});
-
-export async function markNotificationRead(input: unknown): Promise<ActionResult> {
-  const session = await auth();
-  if (!session?.user) return actionError("Unauthorized");
-
-  const parsed = notificationReadSchema.safeParse(input);
-  if (!parsed.success) return actionError("Invalid input");
-
-  await prisma.notification.updateMany({
-    where: { id: parsed.data.notificationId, userId: session.user.id },
-    data: { readAt: new Date() },
-  });
-
-  revalidatePath("/dashboard/notifications");
-  return actionSuccess();
-}
+export { markNotificationRead, markAllNotificationsRead } from "@/actions/notification-actions";

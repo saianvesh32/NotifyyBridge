@@ -5,6 +5,7 @@ import { AnnouncementStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuthor } from "@/lib/auth-guard";
 import { AnnouncementForm } from "@/components/announcements/announcement-form";
+import { AnnouncementPublishButton } from "@/components/announcements/announcement-publish-button";
 
 type Props = { params: { id: string } };
 
@@ -39,9 +40,14 @@ export default async function EditAnnouncementPage({ params }: Props) {
 
   return (
     <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Edit draft</h1>
-        <p className="text-sm text-muted-foreground">Publishing will lock title, body, category, pin, and acknowledgment settings.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="page-title">Edit draft</h1>
+          <p className="text-sm text-muted-foreground">
+            Save changes, then publish when ready. Publishing locks title, body, category, pin, and acknowledgment settings.
+          </p>
+        </div>
+        <AnnouncementPublishButton announcementId={row.id} />
       </div>
       <div className="max-w-3xl rounded-xl border border-border/70 bg-card/40 p-6 shadow-sm backdrop-blur">
         <AnnouncementForm
